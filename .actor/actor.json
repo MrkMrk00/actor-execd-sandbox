@@ -1,7 +1,14 @@
 {
 	"actorSpecification": 1,
 	"name": "actor-execd-sandbox",
+	"title": "Code Sandbox (OpenSandbox execd)",
+	"description": "Standby Actor exposing the OpenSandbox execd API: run shell commands, execute Python/JS/TS/Bash code in persistent kernels, manage files, open PTYs.",
 	"version": "0.0",
 	"buildTag": "latest",
-	"environmentVariables": {}
+	"usesStandbyMode": true,
+	"dockerfile": "../Dockerfile",
+	"readme": "../README.md",
+	"webServerSchema": "./web_server_openapi.json",
+	"minMemoryMbytes": 1024,
+	"defaultMemoryMbytes": 2048
 }

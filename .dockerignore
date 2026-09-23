@@ -1,0 +1,7 @@
+.git
+.gitignore
+.actor
+storage
+node_modules
+.venv
+README.md
