@@ -1,8 +1,9 @@
 #!/bin/sh
-# Starts execd as the container init with a local Jupyter server as its
-# supervised entrypoint. execd reaps children, forwards signals and exits
-# with Jupyter's status, so a dead kernel host takes the run down with it
-# instead of leaving a half-working sandbox behind.
+# Starts execd as the container init. Its supervised entrypoint is
+# supervisor.mjs, which restores and snapshots /workspace and runs the local
+# Jupyter server. execd reaps children, forwards signals and exits with the
+# supervisor's status, so a dead workload takes the run down with it instead
+# of leaving a half-working sandbox behind.
 set -eu
 
 # Apify Standby proxies requests to ACTOR_WEB_SERVER_PORT. Outside Apify
@@ -29,9 +30,14 @@ if [ -n "${EXECD_ENVS:-}" ]; then
     touch "$EXECD_ENVS"
 fi
 
+# Restore before execd opens its port, so the first request already sees
+# the persisted workspace. A failed restore stops the run (fail fast).
+node /opt/opensandbox/supervisor.mjs restore
+
 echo "execd: listening on :${PORT}, jupyter on ${JUPYTER_HOST}"
 
 exec /opt/opensandbox/execd --init --port "$PORT" -- \
+    node /opt/opensandbox/supervisor.mjs run -- \
     jupyter server \
         --ip=127.0.0.1 \
         --port="$JUPYTER_PORT" \

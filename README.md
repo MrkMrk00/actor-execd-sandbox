@@ -6,8 +6,10 @@ exposes its HTTP API. Use it as a code execution sandbox for AI agents: run
 shell commands, execute code in persistent kernels, read and write files,
 open interactive terminals.
 
-Every Standby run is a fresh container. State (files, kernels, background
-commands) lives only for the lifetime of that run.
+Every Standby run is a fresh container. Kernels and background commands live
+only for the lifetime of that run. The `/workspace` directory is persisted:
+it is restored from a key-value store when a run starts and snapshotted back
+(as a `tar.gz` record) when the platform migrates or stops the run.
 
 ## What is inside
 
@@ -87,8 +89,27 @@ Environment variables you can set on the Actor:
 | `EXECD_ACCESS_TOKEN` | unset     | If set, every request must also carry `X-EXECD-ACCESS-TOKEN: <value>`. Mark it as Secret. |
 | `EXECD_ISOLATION_CONFIG` | unset | Path to an isolation TOML (see upstream `configs/`) to tune bubblewrap sessions. |
 | `JUPYTER_PORT`       | `44771`   | Loopback port of the internal Jupyter server.                             |
+| `WORKSPACE_KV_STORE` | `execd-sandbox-workspace` | Named key-value store (in the account of the user running the Actor) that holds the workspace snapshot. Created on first use. |
+| `WORKSPACE_KV_KEY`   | `workspace.tar.gz` | Record key of the snapshot.                                        |
+| `WORKSPACE_PERSIST`  | `1`       | Set to `0` to disable restore and snapshots.                              |
 
 Apify sets `ACTOR_WEB_SERVER_PORT`; the entrypoint passes it to `execd --port`.
+
+## Workspace persistence
+
+`supervisor.mjs` runs as execd's supervised entrypoint and:
+
+1. On start, downloads `WORKSPACE_KV_KEY` from `WORKSPACE_KV_STORE` (if it
+   exists) and extracts it into `/workspace`.
+2. On the platform `migrating` or `aborting` event (Standby idle timeout and
+   worker shutdown emit `aborting`), and on `SIGTERM`, runs
+   `tar -C /workspace -czf - .` and streams it to the same record. Snapshots
+   are skipped when nothing under `/workspace` changed since the last one.
+
+The store and key are shared by all runs of this Actor under one Apify
+account, so the last run to stop wins. Use a task with a different
+`WORKSPACE_KV_KEY` per agent session if sessions must not share files.
+Persistence needs `APIFY_TOKEN`, so it is off when running locally.
 
 ## Running locally
 

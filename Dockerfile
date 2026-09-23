@@ -80,6 +80,7 @@ RUN groupadd --gid 1000 sandbox \
     && chown sandbox:sandbox /workspace
 
 COPY --chown=0:0 --chmod=0755 entrypoint.sh /opt/opensandbox/entrypoint.sh
+COPY --chown=0:0 --chmod=0644 supervisor.mjs /opt/opensandbox/supervisor.mjs
 
 ENV EXECD_ENVS=/home/sandbox/.execd.env \
     JUPYTER_PORT=44771 \
